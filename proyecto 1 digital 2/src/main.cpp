@@ -17,21 +17,23 @@ Electrónica Digital 2 (Biomédica)
 
 #define delaydisplay 40
 //led RGB para semáforo
-#define ledR 14
-#define ledG 26
-#define ledY 25
+#define ledR 23
+#define ledG 21
+#define ledY 22
 
 //sensor y servo
 #define pinSensor 34
 #define pinServo 15
-#define boton 27
+#define boton 13
 
 
 //variables útiles
 float tempActual;
 int32_t dutyServo;
-#define freqPWM 50
-#define resPWM 16 
+#define freqPWM_servo 50
+#define resPWM_servo 16 
+#define freqPWM_led 30
+#define resPWM_led 12 
 hw_timer_t *timer = NULL;
 
 volatile int digitos[4] = {0, 0, 0, 0};  
@@ -51,7 +53,8 @@ unsigned long ultimaMedicion = 0;
 const unsigned long debounceDelay = 50; // ms
 
 // prototipos de función
-void initPWM();
+void initPWMServo();
+void initPWMLeds();
 float leerTemp();
 void relojSemaforo(float temp);
 void mostrarTemp(int temp);
@@ -70,11 +73,9 @@ void setup() {
 
   pinMode(pinSensor, INPUT);
   pinMode(boton, INPUT_PULLUP);
-  pinMode(ledR, OUTPUT);
-  pinMode(ledG, OUTPUT);
-  pinMode(ledY, OUTPUT);
   
-  initPWM();
+  initPWMServo();
+  initPWMLeds();
   configurarDisplay();
 
     // Configuración del timer
@@ -89,9 +90,9 @@ void setup() {
   
 
   if(tempActual==0){
-    digitalWrite(ledR, 0);
-    digitalWrite(ledG, 0);
-    digitalWrite(ledY, 0);
+    ledcWrite(0, 0);
+    ledcWrite(1, 0);
+    ledcWrite(2, 0);
   }
 
 
@@ -184,11 +185,25 @@ float leerTemp(){
   return temp_val;
 }
 
-void initPWM(void){
+void initPWMServo(void){
   // acá configuramos el PWM del servo
-  ledcSetup(3, freqPWM, resPWM);
+  ledcSetup(3, freqPWM_servo, resPWM_servo);
   ledcAttachPin(pinServo, 3);
   ledcWrite(3, 0);  
+}
+void initPWMLeds(void){
+  // acá configuramos el PWM del servo
+  ledcSetup(0, freqPWM_led, resPWM_led);
+  ledcAttachPin(ledR, 3);
+  ledcWrite(0, 0); 
+  
+  ledcSetup(1, freqPWM_led, resPWM_led);
+  ledcAttachPin(ledG, 3);
+  ledcWrite(1, 0); 
+
+  ledcSetup(2, freqPWM_led, resPWM_led);
+  ledcAttachPin(ledY, 3);
+  ledcWrite(2, 0); 
 }
 
 void relojSemaforo(float temp){
@@ -198,19 +213,22 @@ void relojSemaforo(float temp){
 
   // LEDs según temperatura
   if(temp <= 22.0){
-    digitalWrite(ledR, LOW);
-    digitalWrite(ledG, HIGH);
-    digitalWrite(ledY, LOW);
+    // Verde encendido (PWM), otros apagados
+    ledcWrite(0, 0);      // Rojo OFF
+    ledcWrite(1, 4095);   // Verde ON
+    ledcWrite(2, 0);      // Amarillo OFF
   }
   else if(temp <= 25.0){
-    digitalWrite(ledR, LOW);
-    digitalWrite(ledG, LOW);
-    digitalWrite(ledY, HIGH);
+    // Amarillo encendido (PWM), otros apagados
+    ledcWrite(0, 0);      // Rojo OFF
+    ledcWrite(1, 0);      // Verde OFF
+    ledcWrite(2, 4095);   // Amarillo ON
   }
   else{
-    digitalWrite(ledR, HIGH);
-    digitalWrite(ledG, LOW);
-    digitalWrite(ledY, LOW);
+    // Rojo encendido (PWM), otros apagados
+    ledcWrite(0, 4095);   // Rojo ON
+    ledcWrite(1, 0);      // Verde OFF
+    ledcWrite(2, 0);      // Amarillo OFF
   }
 
   // Calcular ciclo de trabajo exacto del servo (0° a 180° = duty de 1638 a 8191)
